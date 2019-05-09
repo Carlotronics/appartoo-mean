@@ -66,6 +66,9 @@ function startSocketIO(socket)
       if(result.length != 1)
         return socket.emit("login_response", "invalid");
       socket.emit("login_response", "ok")
+      socket.handshake.session.user = msg.email;
+      socket.handshake.session.save();
+      // console.log(socket.handshake.session)
     })
   })
 
@@ -80,12 +83,14 @@ function startSocketIO(socket)
       && 'food' in msg
     ))
       return socket.emit("register_response", "unknown_error");
-    encoded_pwd = sha256.x2(msg.pwd);
+    msg.pwd = sha256.x2(msg.pwd);
     _db.collection("users").find({email: msg.email}).toArray(function(err, result){
       if(result.length >= 1)
         return socket.emit("register_response", "email_taken");
       _db.collection("users").insertOne(msg).then(() => {
         socket.emit("register_response", "ok")
+        socket.handshake.session.user = msg.email;
+        socket.handshake.session.save();
       })
     })
   })

@@ -28,6 +28,7 @@ var io = require('socket.io').listen(server);
 var ios = require('socket.io-express-session');
 
 io.of('/dino').use(ios(app_0.session));
+io.of('/user').use(ios(app_0.session));
 io.of('/dino').on('connection', require('../routes/dino').startSocketIO);
 io.of('/user').on('connection', require('../routes/user').startSocketIO);
 

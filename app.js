@@ -7,10 +7,11 @@ var Session    = require('express-session');
 require('dotenv').config();
 var indexRouter = require('./routes/index');
 var userRouter = require('./routes/user').router;
+var dinoRouter = require('./routes/dino').router;
 
 var app = express();
 
-var sessionSecret = "FMR-BookingSystem";
+var sessionSecret = "dino";
 session = Session({
   secret:sessionSecret,
   resave:true,
@@ -46,6 +47,7 @@ app.use('/', function(req, res, next){
 
 app.get('/', indexRouter);
 app.use('/user', userRouter);
+app.use('/dino', dinoRouter);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
