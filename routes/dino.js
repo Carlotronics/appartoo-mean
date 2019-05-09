@@ -17,7 +17,7 @@ let data, parms;
 
 var mongodb = require("mongodb");
 var MongoClient = mongodb.MongoClient;
-_dbs = {};
+let _db;
 MongoClient.connect('mongodb://localhost', { useNewUrlParser: true }, function (err, client) {
   if (err) throw err;
   _db = client.db('dinosaures');
@@ -35,9 +35,12 @@ router.use('/', function(req, res, next){
   console.log(req.session)
   if('user' in req.session) // User is already logged in
   {
-    res.send("Logged in");
-    res.end();
-    // res.redirect('/dino')
+    _db.collection("users").find({email: req.session.user}).toArray(function(err, result){
+      var data = result[0];
+      delete data.pwd;
+      parms.data = data;
+      res.render("dino", parms);
+    })
   }
   else
   {
@@ -50,7 +53,21 @@ router.use('/', function(req, res, next){
 
 function startSocketIO(socket)
 {
+  socket.on("data_change", function(msg){
+    if(!(
+      typeof msg == "object"
+      && 'email' in msg
+      && 'age' in msg
+      && 'family' in msg
+      && 'race' in msg
+      && 'food' in msg
+    ))
+      return socket.emit("response", "invalid");
 
+    _db.collection("users").updateOne({email: msg.email}, {$set: msg}).then(() => {
+      socket.emit("response", "ok");
+    })
+  })
 }
 
 module.exports = {

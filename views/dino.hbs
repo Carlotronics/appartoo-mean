@@ -1,0 +1,67 @@
+<dl>
+	<dt>Email</dt>
+	<dd id="dino-email">{{data.email}}</dd>
+	
+	<dt>Âge</dt>
+	<dd id="dino-age">{{data.age}}</dd>
+	
+	<dt>Famille</dt>
+	<dd id="dino-family">{{data.family}}</dd>
+	
+	<dt>Race</dt>
+	<dd id="dino-race">{{data.race}}</dd>
+	
+	<dt>Nourriture</dt>
+	<dd id="dino-food">{{data.food}}</dd>
+</dl>
+<hr>
+<button type="button" id="btn_change" onclick="editData()" class="btn btn-success btn-circle btn-xl"><i class="fas fa-user-edit"></i></button>
+
+<script type="text/javascript">
+	var socket = io.connect("/dino");
+
+	function editData()
+	{
+		$("dd").each(function(i){
+			$(this).html("<input id='ipt_" + $(this).attr("id") + "' type='text' value='" + $(this).html() + "'>");
+		})
+
+		$("#btn_change").html('<i class="fa fa-check"></i>');
+		$("#btn_change").attr("onclick", "finishEditing()");
+	}
+
+	function finishEditing()
+	{
+
+		socket.on("response", response);
+		socket.emit("data_change", {
+			email: $("#ipt_dino-email").val().trim(),
+			age: $("#ipt_dino-age").val().trim(),
+			family: $("#ipt_dino-family").val().trim(),
+			race: $("#ipt_dino-race").val().trim(),
+			food: $("#ipt_dino-food").val().trim()
+		})
+	}
+
+	function response(msg)
+	{
+		socket.removeListener("response", response);
+
+		switch(msg)
+		{
+			case "ok":
+				$("dd").each(function(i){
+					var val = $($(this).children()[0]).val();
+					$(this).html(val);
+				})
+
+				$("#btn_change").html('<i class="fas fa-user-edit"></i>');
+				$("#btn_change").attr("onclick", "editData()");
+				break;
+
+			case "invalid":
+				return toastr.error("Certaines informations ne sont pas valides, veuillez vérifier et réessayer.");
+
+		}
+	}
+</script>
