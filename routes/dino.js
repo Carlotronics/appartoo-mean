@@ -72,6 +72,16 @@ function startSocketIO(socket)
     });
   })
 
+  socket.on("removeContact", function(msg){
+    _db.collection("users").find({email: socket.handshake.session.user}).toArray(function(err, result){
+      var contacts = result[0].contacts;
+      for(i in contacts)
+        if(contacts[i] == msg)
+          contacts.splice(i, 1);
+      _db.collection("users").updateOne({email: socket.handshake.session.user}, {$set: {contacts: contacts}});
+    });
+  })
+
   socket.on("addContact", function(msg){
     _db.collection("users").find({email: msg}).toArray(function(err, result){
       if(result.length == 0)
