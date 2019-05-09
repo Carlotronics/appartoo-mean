@@ -1,12 +1,8 @@
-<form>
+<form id="register-form">
   <div class="form-group">
     <label for="email">Email</label>
     <input type="email" class="form-control" id="email" aria-describedby="emailHelp" placeholder="Email">
     <small id="emailHelp" class="form-text text-muted">Elle vous permettra de vous connecter</small>
-  </div>
-  <div class="form-group">
-    <label for="login">Nom d'utilisateur</label>
-    <input type="text" class="form-control" id="login" placeholder="Choisissez un nom d'utilisateur">
   </div>
   <div class="form-group">
     <label for="password">Mot de passe</label>
@@ -37,3 +33,60 @@
   </div>
   <button type="submit" class="btn btn-primary">S'inscrire</button>
 </form>
+
+<script type="text/javascript">
+  var socket = io.connect("/user");
+
+  $(function() {
+      $('#register-form').on('submit', function(e) { //use on if jQuery 1.7+
+          e.preventDefault();
+          var email = $("#email").val().trim();
+          var pwd = $("#password").val().trim();
+          var pwd_conf = $("#password_conf").val().trim();
+          var age = parseInt($("#age").val().trim());
+          var family = $("#family").val().trim();
+          var race = $("#race").val().trim();
+          var food = $("#food").val().trim();
+          if(email == ""
+            || pwd == ""
+            || pwd_conf == ""
+            || !Number.isInteger(age)
+            || family == ""
+            || race == ""
+            || food == ""
+            )
+            return toastr.error("Veuillez remplir correctement tous les champs", "Erreur")
+
+          if(pwd != pwd_conf)
+            return toastr.error("Veuillez vérifier la confirmation de votre mot de passe", "Erreur");
+
+          socket.on("register_response", afterSocket);
+
+          socket.emit("register", {
+            email: email,
+            pwd: pwd,
+            age: age,
+            family: family,
+            race: race,
+            food: food
+          })
+      });
+  });
+
+  function afterSocket(msg)
+  {
+    socket.removeListener("register_response", afterSocket);
+    switch(msg)
+    {
+      case "ok":
+        window.location = "/dino";
+        break;
+
+      case "email_taken":
+        return toastr.error("Email deja pris");
+
+      case "unknown_error":
+        return toastr.error("Rechargez la page");
+    }
+  }
+</script>

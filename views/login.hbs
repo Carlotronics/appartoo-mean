@@ -1,11 +1,52 @@
-<form>
+<form id="login-form">
   <div class="form-group">
-    <label for="login">Nom d'utilisateur ou email</label>
-    <input type="text" class="form-control" id="login" placeholder="Choisissez un nom d'utilisateur">
+    <label for="email">Email</label>
+    <input type="text" class="form-control" id="email" placeholder="Choisissez un nom d'utilisateur">
   </div>
   <div class="form-group">
     <label for="password">Mot de passe</label>
     <input type="password" class="form-control" id="password" placeholder="Mot de passe">
   </div>
-  <button type="submit" class="btn btn-primary">Connexion</button>
+  <button type="submit" id="login-submit" class="btn btn-primary">Connexion</button>
 </form>
+
+<script type="text/javascript">
+	var socket = io.connect("/user");
+
+	$(function() {
+	    $('#login-form').on('submit', function(e) { //use on if jQuery 1.7+
+	        e.preventDefault();
+	        var email = $("#email").val().trim();
+	        var pwd = $("#password").val().trim();
+	        if(email == "" || pwd == "")
+	        	return toastr.error("Veuillez remplir tous les champs", "Erreur")
+
+	        socket.on("login_response", afterSocket);
+
+	        socket.emit("login", {
+	        	email: email,
+	        	pwd: pwd
+	        })
+	    });
+	});
+
+	function afterSocket(msg)
+	{
+		socket.removeListener("login_response", afterSocket);
+		switch(msg)
+		{
+			case "ok":
+				window.location = "/dino";
+				break;
+
+			case "email_taken":
+				return toastr.error("Email deja pris");
+
+			case "login_taken":
+				return toastr.error("Nom d'utilisateur déjà pris");
+
+			case "invalid":
+				return toastr.error("Email ou mot de passe invalide");
+		}
+	}
+</script>

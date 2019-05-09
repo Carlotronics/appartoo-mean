@@ -1,5 +1,6 @@
 var express = require('express');
 var router = express.Router();
+var sha256 = require("sha256");
 // var authHelper = require('../helpers/auth');
 
 var bodyParser = require('body-parser');
@@ -54,6 +55,41 @@ router.get('/register', function(req, res, next){
   parms.active = {register: true};
   res.render('register', parms);
 })
+
+function startSocketIO(socket)
+{
+  socket.on('login', function(msg){
+    if(!(typeof msg == "object" && 'email' in msg && 'pwd' in msg))
+      return socket.emit("login_response", "unknown_error");
+    encoded_pwd = sha256.x2(msg.pwd);
+    _db.collection("users").find({email: msg.email, pwd: encoded_pwd}).toArray(function(err, result){
+      if(result.length != 1)
+        return socket.emit("login_response", "invalid");
+      socket.emit("login_response", "ok")
+    })
+  })
+
+  socket.on('register', function(msg){
+    if(!(
+      typeof msg == "object"
+      && 'email' in msg
+      && 'pwd' in msg
+      && 'age' in msg
+      && 'family' in msg
+      && 'race' in msg
+      && 'food' in msg
+    ))
+      return socket.emit("register_response", "unknown_error");
+    encoded_pwd = sha256.x2(msg.pwd);
+    _db.collection("users").find({email: msg.email}).toArray(function(err, result){
+      if(result.length >= 1)
+        return socket.emit("register_response", "email_taken");
+      _db.collection("users").insertOne(msg).then(() => {
+        socket.emit("register_response", "ok")
+      })
+    })
+  })
+}
 
 module.exports = {
   router: router,
