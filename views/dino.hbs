@@ -1,24 +1,91 @@
-<dl>
-	<dt>Email</dt>
-	<dd id="dino-email">{{data.email}}</dd>
-	
-	<dt>Âge</dt>
-	<dd id="dino-age">{{data.age}}</dd>
-	
-	<dt>Famille</dt>
-	<dd id="dino-family">{{data.family}}</dd>
-	
-	<dt>Race</dt>
-	<dd id="dino-race">{{data.race}}</dd>
-	
-	<dt>Nourriture</dt>
-	<dd id="dino-food">{{data.food}}</dd>
-</dl>
-<hr>
-<button type="button" id="btn_change" onclick="editData()" class="btn btn-success btn-circle btn-xl"><i class="fas fa-user-edit"></i></button>
+<div class="row">
+	<div class="column">
+		<dl>
+			<dt>Email</dt>
+			<dd id="dino-email">{{data.email}}</dd>
+			
+			<dt>Âge</dt>
+			<dd id="dino-age">{{data.age}}</dd>
+			
+			<dt>Famille</dt>
+			<dd id="dino-family">{{data.family}}</dd>
+			
+			<dt>Race</dt>
+			<dd id="dino-race">{{data.race}}</dd>
+			
+			<dt>Nourriture</dt>
+			<dd id="dino-food">{{data.food}}</dd>
+		</dl>
+		<hr>
+		<button type="button" id="btn_change" onclick="editData()" class="btn btn-success btn-circle btn-xl"><i class="fas fa-user-edit"></i></button>
+	</div>
+	<div class="column">
+		{{#unless contacts}}
+			<p>Vous n'avez aucun contact</p>
+		{{/unless}}
+		<!-- <button type="button" id="btn_add_contact" onclick="addContact()" class="btn btn-primary">Ajouter un contact</button> -->
+<!--Make sure the form has the autocomplete function switched off:-->
+		<form autocomplete="off" id="add_contact">
+		  <div class="autocomplete" style="width:300px;">
+		    <input id="myInput" type="text" name="myCountry" class="auto" placeholder="Email">
+		  </div>
+		  <p><button type="submit" class="btn btn-primary">Ajouter un contact</button></p>
+		</form>
+
+    {{#if contacts}}
+      <div>
+        <ul>
+          {{#each contacts}}
+            <li>
+              {{this}}
+            </li>
+          {{/each}}
+        </ul>
+      </div>
+    {{/if}}
+	</div>
+</div>
 
 <script type="text/javascript">
 	var socket = io.connect("/dino");
+
+  var new_contact;
+
+  $(function() {
+      $('#add_contact').on('submit', function(e) { //use on if jQuery 1.7+
+        console.log("submitted");
+          e.preventDefault();
+          var email = $("#myInput").val().trim()
+          if(email == "")
+            return toastr.error("Veuillez vérifier votre saisie", "Erreur")
+
+          socket.on("response", response2);
+
+          socket.emit("addContact", email)
+          new_contact = email;
+      });
+  });
+
+  function response2(msg)
+  {
+    socket.removeListener("response", response2);
+    switch(msg)
+    {
+      case "email_does_not_exist":
+        return toastr.error("Veuillez vérifier votre saisie", "Erreur")
+
+      case "already_contact":
+        return "Cet utilisateur fait déjà partie de vos contacts"
+
+      case "ok":
+        for(i in users)
+          if(users[i] == new_contact){
+            users.splice(i, 1);
+            break;
+          }
+        return autocomplete(document.getElementById("myInput"), users);
+    }
+  }
 
 	function editData()
 	{
@@ -64,4 +131,82 @@
 
 		}
 	}
+
+	var users = [];
+
+	function receiveUsersList(msg)
+	{
+    console.log("Reveived data", msg);
+		socket.removeListener("receiveUsersList", receiveUsersList);
+		users = msg;
+    autocomplete(document.getElementById("myInput"), users);
+	}
+	socket.on("receiveUsersList", receiveUsersList);
+
+  function autocomplete(inp, arr) {
+    var currentFocus;
+    inp.addEventListener("input", function(e) {
+      var a, b, i, val = this.value;
+      closeAllLists();
+      if (!val) { return false;}
+      currentFocus = -1;
+      a = document.createElement("DIV");
+      a.setAttribute("id", this.id + "autocomplete-list");
+      a.setAttribute("class", "autocomplete-items");
+      this.parentNode.appendChild(a);
+      for (i = 0; i < arr.length; i++) {
+        if (arr[i].substr(0, val.length).toUpperCase() == val.toUpperCase()) {
+          b = document.createElement("DIV");
+          b.innerHTML = "<strong>" + arr[i].substr(0, val.length) + "</strong>";
+          b.innerHTML += arr[i].substr(val.length);
+          b.innerHTML += "<input type='hidden' value='" + arr[i] + "'>";
+              b.addEventListener("click", function(e) {
+              inp.value = this.getElementsByTagName("input")[0].value;
+              closeAllLists();
+          });
+          a.appendChild(b);
+        }
+      }
+  });
+  inp.addEventListener("keydown", function(e) {
+      var x = document.getElementById(this.id + "autocomplete-list");
+      if (x) x = x.getElementsByTagName("div");
+      if (e.keyCode == 40) {
+        currentFocus++;
+        addActive(x);
+      } else if (e.keyCode == 38) {
+        currentFocus--;
+        addActive(x);
+      } else if (e.keyCode == 13) {
+        e.preventDefault();
+        if (currentFocus > -1) {
+          if (x) x[currentFocus].click();
+        }
+      }
+  });
+  function addActive(x) {
+    if (!x) return false;
+    removeActive(x);
+    if (currentFocus >= x.length) currentFocus = 0;
+    if (currentFocus < 0) currentFocus = (x.length - 1);
+    x[currentFocus].classList.add("autocomplete-active");
+  }
+  function removeActive(x) {
+    for (var i = 0; i < x.length; i++) {
+      x[i].classList.remove("autocomplete-active");
+    }
+  }
+  function closeAllLists(elmnt) {
+    var x = document.getElementsByClassName("autocomplete-items");
+    for (var i = 0; i < x.length; i++) {
+      if (elmnt != x[i] && elmnt != inp) {
+        x[i].parentNode.removeChild(x[i]);
+      }
+    }
+  }
+  document.addEventListener("click", function (e) {
+    closeAllLists(e.target);
+  });
+  }
+  
 </script>

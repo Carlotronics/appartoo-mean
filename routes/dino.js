@@ -39,20 +39,54 @@ router.use('/', function(req, res, next){
       var data = result[0];
       delete data.pwd;
       parms.data = data;
+      if('contacts' in data)
+        parms.contacts = data.contacts;
       res.render("dino", parms);
     })
   }
   else
   {
-    // res.send("Not logged in");
-    // res.end();
-    // next()
     res.redirect("/user/login")
   }
 });
 
 function startSocketIO(socket)
 {
+  // socket.emit("receiveUsersList")
+  _db.collection("users").find({email: {$ne: socket.handshake.session.user}}).toArray(function(err, result){
+    _db.collection("users").find({email: socket.handshake.session.user}).toArray(function(err, result1){
+      var re = [];
+      var me = result1[0];
+      console.log(result, result1, re);
+      // var my_contacts = me.contacts;
+      for(e in result){
+        /*if(me.contacts != undefined)
+          if(!result[e].email in me.contacts)
+            re.push(result[e].email);
+        else
+          re.push(result[e].email);*/
+        re.push(result[e].email);
+      }
+      console.log(re);
+      socket.emit("receiveUsersList", re);
+    });
+  })
+
+  socket.on("addContact", function(msg){
+    _db.collection("users").find({email: msg}).toArray(function(err, result){
+      if(result.length == 0)
+        return socket.emit("response", "email_does_not_exist");
+      _db.collection("users").find({email: socket.handshake.session.user}).toArray(function(err, result1){
+        var me = result1[0];
+        if('contacts' in me && me.contacts[msg] != undefined)
+          return socket.emit("response", "already_contact");
+        _db.collection("users").updateOne({email: socket.handshake.session.user}, {$push: {contacts: msg}}).then(() => {
+          socket.emit("response", "ok");
+        })
+      });
+    });
+  })
+
   socket.on("data_change", function(msg){
     if(!(
       typeof msg == "object"
